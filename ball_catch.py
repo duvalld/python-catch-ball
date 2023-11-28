@@ -25,8 +25,10 @@ class Game:
         self._floor = Floor()
         self._player = Player(8, self._floor._image.get_height())
         self._ball_speed = 3
+        self._game_count = 1
         self._missed = 0
         self._score = 0
+        self._game_history_list = []
         # initial ball instances
         self._balls = [
             Ball((100, 0), 3),
@@ -61,6 +63,7 @@ class Game:
                 self._balls.append(Ball((randint(50, 300), -50), self._ball_speed))
                 # if player missed 3 balls call gameover method
                 if self._missed >= 3:
+                    self.game_history()
                     self.game_over()
             # ball collide to player
             elif ball_i._rect.colliderect(self._player._rect):
@@ -76,12 +79,23 @@ class Game:
                 self._score_effect.play()
     # gameover method, handles gameover state
     def game_over(self):
+        # clear balls on screen
+        self._balls.clear()
+        # reinitialize balls
+        self._balls = [
+            Ball((100, 0), 3),
+            Ball((300,0), 3)
+        ]
         # play game over sound
         self._gameover_sound.play()
         # intialize game over text
         self._gameover_text = self._font.render("GAME OVER", True, (200, 200, 200))
         # intialize final score text
         self._score_text = self._font.render(f"Score: {self._score}", True, "white")
+        # initialize play again text
+        self._play_again_text = self._font.render("Press SPACE to play again...", True, (200, 200, 200))
+        # initialize error text
+        self._error_text = self._font.render("Press Space Only", True, (255, 0, 0))
         # stop background music
         self._bg_music.stop()
         
@@ -91,18 +105,40 @@ class Game:
         screen.blit(self._gameover_text, ((screen_width / 2) - (self._gameover_text.get_width() / 2), screen_height / 2 - self._gameover_text.get_height() / 2))
         # render final score text to screen
         screen.blit(self._score_text, ((screen_width / 2) - (self._gameover_text.get_width() / 2), (screen_height / 2) + self._gameover_text.get_height()))
-        
-        game_over = True
+        # Render play again text
+        screen.blit(self._play_again_text, (10, screen_height - self._play_again_text.get_height()))
+        # render Game Score history
+        game_history_position_height = 10
+        for game_history_i in self._game_history_list:
+            self._game_history_text = self._font.render(f"Game: {game_history_i[0]} Score: {game_history_i[1]}", True, "white")
+            screen.blit(self._game_history_text, (10, game_history_position_height))
+            game_history_position_height += self._game_history_text.get_height() + 5
         # reset game score and missed count
         self._score = 0
         self._missed = 0
         # update game screen
         pygame.display.update()
-        # delay for 5 seconds
-        sleep(5)
-        # exit game
-        pygame.quit
-        exit()
+        # play again input
+        waiting_for_input = True
+        while waiting_for_input:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        waiting_for_input = False
+                        self._bg_music.play(loops= -1)
+                        self._ball_speed = 3
+                        self._game_count += 1
+                        
+                    else:
+                        screen.blit(self._error_text, (10, screen_height - self._play_again_text.get_height()-self._error_text.get_height()))
+                        pygame.display.update()
+    # populate game history list
+    def game_history(self):
+        self._game_history_list.append([self._game_count, self._score])
+        
     # Welcome Screen
     def welcom_screen(self):
         screen.fill("lightblue")
@@ -139,6 +175,8 @@ class Game:
         self._missed_text = self._font.render(f"Missed: {self._missed}", True, "red")
         # render missed ball on game screen
         screen.blit(self._missed_text, (screen_width - self._missed_text.get_width(), 5))
+        self._game_count_text = self._font.render(f"Game {self._game_count}", True, "orange")
+        screen.blit(self._game_count_text, ((screen_width / 2) - (self._missed_text.get_width() / 2), 5))
         # call player movement method
         self._player.movement()
         # render ball object from balls list
